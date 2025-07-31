@@ -1,51 +1,53 @@
-name: Kali/Ubuntu RDP via Ngrok
+name: SSH Access via Ngrok
 
 on: [push, workflow_dispatch]
 
 jobs:
-  setup-rdp:
+  ssh-access:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install Desktop + RDP
-      run: |
-        sudo apt update
-        sudo apt install -y xfce4 xfce4-goodies xrdp jq
+    - name: Install Dependencies
+      run: sudo apt update && sudo apt install -y wget unzip openssh-server jq
 
-    - name: Set RDP Password
-      run: echo "runner:P@ssw0rd!" | sudo chpasswd
-
-    - name: Set Desktop Environment
-      run: echo "startxfce4" | sudo tee -a /etc/skel/.xsession
-
-    - name: Enable & Start xRDP
-      run: |
-        sudo systemctl enable xrdp
-        sudo systemctl start xrdp
-
-    - name: Download and Setup Ngrok
+    - name: Download and Extract Ngrok
       run: |
         wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.zip -O ngrok.zip
         unzip ngrok.zip
-        ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
 
-    - name: Start Ngrok Tunnel (RDP Port 3389)
-      run: |
-        nohup ./ngrok tcp 3389 > ngrok.log 2>&1 &
-        sleep 5
-        curl -s http://127.0.0.1:4040/api/tunnels > tunnels.json
-        cat tunnels.json
+    - name: Authenticate Ngrok
+      run: ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
 
-    - name: Extract RDP Address
+    - name: Start SSH Service
       run: |
-        addr=$(jq -r '.tunnels[0].public_url' < tunnels.json)
-        echo "===================================="
-        echo "✅ Connect using: $addr"
-        echo "🧑‍💻 Username: runner"
-        echo "🔐 Password: P@ssw0rd!"
-        echo "===================================="
+        sudo systemctl start ssh
+        sudo systemctl enable ssh
 
-    - name: Keep Runner Alive for RDP Session
+    - name: Set Password for runner user
+      run: echo "runner@P@ssw0rd!" | sudo chpasswd
+
+    - name: Allow SSH Password Login
       run: |
-        echo "🕐 Workflow is now holding to keep RDP alive..."
-        tail -f /dev/null
+        sudo sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+        sudo sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config
+        sudo sed -i 's/^#\?UsePAM .*/UsePAM yes/' /etc/ssh/sshd_config
+        sudo systemctl restart ssh
+
+    - name: Start Ngrok Tunnel for SSH
+      run: |
+        nohup ./ngrok tcp 22 > ngrok.log 2>&1 &
+        sleep 6
+        curl -s http://localhost:4040/api/tunnels > tunnels.json
+        address=$(jq -r '.tunnels[0].public_url' < tunnels.json | sed 's#tcp://##')
+        host=$(echo "$address" | cut -d: -f1)
+        port=$(echo "$address" | cut -d: -f2)
+        echo ""
+        echo "==================== SSH Command ===================="
+        echo "ssh runner@$host -p $port"
+        echo "Password: P@ssw0rd!"
+        echo "====================================================="
+        echo ""
+        echo "::set-output name=ssh_command::ssh runner@$host -p $port"
+
+    - name: Keep Runner Alive
+      run: tail -f /dev/null

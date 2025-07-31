@@ -18,17 +18,24 @@ jobs:
 
     - name: Authenticate Ngrok
       run: ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
-      env:
-        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
-    - name: Enable SSH Server
-      run: sudo systemctl start ssh && sudo systemctl enable ssh
+    - name: Enable and Start SSH Server
+      run: |
+        sudo systemctl enable ssh
+        sudo systemctl start ssh
 
-    - name: Set Default Password (Auto)
-      run: echo "runneradmin:P@ssw0rd!" | sudo chpasswd
+    - name: Create .ssh Directory and Add Public Key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PUBLIC_KEY }}" >> ~/.ssh/authorized_keys
+        chmod 700 ~/.ssh
+        chmod 600 ~/.ssh/authorized_keys
 
     - name: Allow SSH Login
-      run: sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && sudo systemctl restart ssh
+      run: |
+        sudo sed -i 's/#*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+        sudo sed -i 's/#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+        sudo systemctl restart ssh
 
-    - name: Create SSH Tunnel with Ngrok
-      run: ./ngrok tcp 22 
+    - name: Start Ngrok Tunnel for Port 22 (SSH)
+      run: ./ngrok tcp 22

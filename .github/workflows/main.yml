@@ -1,47 +1,40 @@
-name: Linux VPS Setup
+name: Browser Terminal via Ngrok
 
 on: [push, workflow_dispatch]
 
 jobs:
-  build:
+  terminal:
     runs-on: ubuntu-latest
 
     steps:
     - name: Install Dependencies
-      run: sudo apt update && sudo apt install -y wget unzip openssh-server curl jq
+      run: |
+        sudo apt update
+        sudo apt install -y wget unzip git build-essential cmake libjson-c-dev libwebsockets-dev
+
+    - name: Download and Build ttyd
+      run: |
+        git clone https://github.com/tsl0922/ttyd.git
+        cd ttyd
+        mkdir build && cd build
+        cmake ..
+        make -j$(nproc)
+        sudo make install
 
     - name: Download Ngrok
-      run: wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.zip -O ngrok.zip
-
-    - name: Extract Ngrok
-      run: unzip ngrok.zip
+      run: |
+        wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.zip -O ngrok.zip
+        unzip ngrok.zip
 
     - name: Authenticate Ngrok
       run: ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
-    - name: Enable and Start SSH Server
+    - name: Start ttyd and Ngrok
       run: |
-        sudo systemctl enable ssh
-        sudo systemctl start ssh
-
-    - name: Create .ssh Directory and Add Public Key
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PUBLIC_KEY }}" >> ~/.ssh/authorized_keys
-        chmod 700 ~/.ssh
-        chmod 600 ~/.ssh/authorized_keys
-
-    - name: Allow SSH Login
-      run: |
-        sudo sed -i 's/#*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
-        sudo sed -i 's/#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
-        sudo systemctl restart ssh
-
-    - name: Start Ngrok in Background
-      run: |
-        ./ngrok tcp 22 --log=stdout > ngrok.log &
+        nohup ttyd -p 7681 bash &
+        nohup ./ngrok http 7681 &
         sleep 5
-
-    - name: Show Ngrok Address
-      run: |
-        cat ngrok.log | grep -Eo "tcp://[^\"]+" || echo "Ngrok address not found"
+        curl -s localhost:4040/api/tunnels > tunnels.json
+        cat tunnels.json

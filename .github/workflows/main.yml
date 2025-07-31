@@ -1,4 +1,4 @@
-name: Kali/Ubuntu RDP Setup via Ngrok
+name: Kali/Ubuntu RDP via Ngrok
 
 on: [push, workflow_dispatch]
 
@@ -7,29 +7,45 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install XFCE & xRDP
+    - name: Install Desktop + RDP
       run: |
         sudo apt update
-        sudo apt install -y xfce4 xfce4-goodies xrdp
-        sudo systemctl enable xrdp
-        sudo systemctl start xrdp
+        sudo apt install -y xfce4 xfce4-goodies xrdp jq
 
     - name: Set RDP Password
       run: echo "runner:P@ssw0rd!" | sudo chpasswd
 
-    - name: Configure xRDP to use XFCE
+    - name: Set Desktop Environment
       run: echo "startxfce4" | sudo tee -a /etc/skel/.xsession
 
-    - name: Download and Start Ngrok Tunnel (TCP 3389)
+    - name: Enable & Start xRDP
+      run: |
+        sudo systemctl enable xrdp
+        sudo systemctl start xrdp
+
+    - name: Download and Setup Ngrok
       run: |
         wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.zip -O ngrok.zip
         unzip ngrok.zip
         ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
-        nohup ./ngrok tcp 3389 & sleep 5
-        curl -s localhost:4040/api/tunnels > ngrok_tunnels.json
-        cat ngrok_tunnels.json
 
-    - name: Show Ngrok RDP URL
+    - name: Start Ngrok Tunnel (RDP Port 3389)
       run: |
-        addr=$(cat ngrok_tunnels.json | jq -r '.tunnels[0].public_url')
-        echo "🔗 RDP URL: $addr"
+        nohup ./ngrok tcp 3389 > ngrok.log 2>&1 &
+        sleep 5
+        curl -s http://127.0.0.1:4040/api/tunnels > tunnels.json
+        cat tunnels.json
+
+    - name: Extract RDP Address
+      run: |
+        addr=$(jq -r '.tunnels[0].public_url' < tunnels.json)
+        echo "===================================="
+        echo "✅ Connect using: $addr"
+        echo "🧑‍💻 Username: runner"
+        echo "🔐 Password: P@ssw0rd!"
+        echo "===================================="
+
+    - name: Keep Runner Alive for RDP Session
+      run: |
+        echo "🕐 Workflow is now holding to keep RDP alive..."
+        tail -f /dev/null

@@ -34,7 +34,10 @@ jobs:
     - name: Start ttyd and Ngrok
       run: |
         nohup ttyd -p 7681 bash &
-        nohup ./ngrok http 7681 &
+        nohup ./ngrok http 7681 > ngrok.log &
         sleep 5
         curl -s localhost:4040/api/tunnels > tunnels.json
         cat tunnels.json
+
+    - name: Keep the session alive
+      run: sleep infinity

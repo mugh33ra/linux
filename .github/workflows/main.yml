@@ -8,7 +8,7 @@ jobs:
 
     steps:
     - name: Install Dependencies
-      run: sudo apt update && sudo apt install -y wget unzip openssh-server
+      run: sudo apt update && sudo apt install -y wget unzip openssh-server curl jq
 
     - name: Download Ngrok
       run: wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.zip -O ngrok.zip
@@ -37,5 +37,11 @@ jobs:
         sudo sed -i 's/#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
         sudo systemctl restart ssh
 
-    - name: Start Ngrok Tunnel for Port 22 (SSH)
-      run: ./ngrok tcp 22
+    - name: Start Ngrok in Background
+      run: |
+        ./ngrok tcp 22 --log=stdout > ngrok.log &
+        sleep 5
+
+    - name: Show Ngrok Address
+      run: |
+        cat ngrok.log | grep -Eo "tcp://[^\"]+" || echo "Ngrok address not found"

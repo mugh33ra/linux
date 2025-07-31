@@ -1,45 +1,35 @@
-name: Linux VPS Setup via SSH
+name: Kali/Ubuntu RDP Setup via Ngrok
 
 on: [push, workflow_dispatch]
 
 jobs:
-  build:
+  setup-rdp:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install Dependencies
-      run: sudo apt update && sudo apt install -y wget unzip openssh-server
-
-    - name: Download Ngrok
-      run: wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.zip -O ngrok.zip
-
-    - name: Extract Ngrok
-      run: unzip ngrok.zip
-
-    - name: Authenticate Ngrok
-      run: ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
-
-    - name: Enable SSH Server
+    - name: Install XFCE & xRDP
       run: |
-        sudo systemctl start ssh
-        sudo systemctl enable ssh
+        sudo apt update
+        sudo apt install -y xfce4 xfce4-goodies xrdp
+        sudo systemctl enable xrdp
+        sudo systemctl start xrdp
 
-    - name: Set Password for runner user
+    - name: Set RDP Password
+      run: echo "runner:P@ssw0rd!" | sudo chpasswd
+
+    - name: Configure xRDP to use XFCE
+      run: echo "startxfce4" | sudo tee -a /etc/skel/.xsession
+
+    - name: Download and Start Ngrok Tunnel (TCP 3389)
       run: |
-        echo "runner:P@ssw0rd!" | sudo chpasswd
+        wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.zip -O ngrok.zip
+        unzip ngrok.zip
+        ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+        nohup ./ngrok tcp 3389 & sleep 5
+        curl -s localhost:4040/api/tunnels > ngrok_tunnels.json
+        cat ngrok_tunnels.json
 
-    - name: Allow Password Login for SSH
+    - name: Show Ngrok RDP URL
       run: |
-        sudo sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config
-        sudo sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config
-        sudo sed -i 's/^#\?UsePAM .*/UsePAM yes/' /etc/ssh/sshd_config
-        sudo systemctl restart ssh
-
-    - name: Start Ngrok Tunnel
-      run: |
-        nohup ./ngrok tcp 22 --log=stdout > ngrok.log &
-        sleep 10
-        cat ngrok.log | grep "tcp://"
-
-    - name: Keep job alive for 6 hours (prevent auto-termination)
-      run: timeout 6h tail -f /dev/null
+        addr=$(cat ngrok_tunnels.json | jq -r '.tunnels[0].public_url')
+        echo "🔗 RDP URL: $addr"

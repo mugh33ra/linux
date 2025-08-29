@@ -19,14 +19,16 @@ jobs:
     - name: Authenticate Ngrok
       run: ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
 
-    - name: Configure & Start SSH
+    - name: Configure SSH Server
       run: |
         sudo mkdir -p /var/run/sshd
         echo "runner:P@ssw0rd!" | sudo chpasswd
         sudo sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config
         sudo sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config
         sudo sed -i 's/^#\?UsePAM .*/UsePAM yes/' /etc/ssh/sshd_config
-        sudo /usr/sbin/sshd -D &
+
+    - name: Start SSH Server in Background
+      run: sudo /usr/sbin/sshd -D &
 
     - name: Start Ngrok Tunnel for SSH
       run: |
@@ -42,7 +44,7 @@ jobs:
         echo "Password: P@ssw0rd!"
         echo "====================================================="
         echo ""
-        echo "ssh_command=ssh runner@$host -p $port" >> $GITHUB_OUTPUT
+        echo "::set-output name=ssh_command::ssh runner@$host -p $port"
 
     - name: Keep job alive for 6 hours (prevent auto-termination)
       run: timeout 6h tail -f /dev/null

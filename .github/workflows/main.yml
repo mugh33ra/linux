@@ -1,4 +1,4 @@
-name: Linux VPS Setup via SSH
+name: Linux VPS Setup via Tmate
 
 on: [push, workflow_dispatch]
 
@@ -7,44 +7,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install Dependencies
-      run: sudo apt update && sudo apt install -y wget unzip openssh-server jq curl
-
-    - name: Download Ngrok
-      run: wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.zip -O ngrok.zip
-
-    - name: Extract Ngrok
-      run: unzip ngrok.zip
-
-    - name: Authenticate Ngrok
-      run: ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
-
-    - name: Configure SSH Server
+    - name: Install Tmate & Setup SSH
       run: |
-        sudo mkdir -p /var/run/sshd
-        echo "runner:P@ssw0rd!" | sudo chpasswd
-        sudo sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config
-        sudo sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config
-        sudo sed -i 's/^#\?UsePAM .*/UsePAM yes/' /etc/ssh/sshd_config
+        sudo apt update
+        sudo apt install -y tmate openssh-client
 
-    - name: Start SSH Server in Background
-      run: sudo /usr/sbin/sshd -D &
-
-    - name: Start Ngrok Tunnel for SSH
+    - name: Start Tmate Session
       run: |
-        nohup ./ngrok tcp 22 > ngrok.log 2>&1 &
-        sleep 6
-        curl -s http://localhost:4040/api/tunnels > tunnels.json
-        address=$(jq -r '.tunnels[0].public_url' < tunnels.json | sed 's#tcp://##')
-        host=$(echo "$address" | cut -d: -f1)
-        port=$(echo "$address" | cut -d: -f2)
+        tmate -F -v -S /tmp/tmate.sock new-session -d
+        tmate -S /tmp/tmate.sock wait tmate-ready
+        TMATE_SSH=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
+        TMATE_WEB=$(tmate -S /tmp/tmate.sock display -p '#{tmate_web}')
         echo ""
-        echo "==================== SSH Command ===================="
-        echo "ssh runner@$host -p $port"
-        echo "Password: P@ssw0rd!"
-        echo "====================================================="
+        echo "==================== CONNECT VIA SSH ===================="
+        echo "$TMATE_SSH"
         echo ""
-        echo "::set-output name=ssh_command::ssh runner@$host -p $port"
+        echo "==================== CONNECT VIA WEB ===================="
+        echo "$TMATE_WEB"
+        echo "========================================================="
+        echo ""
+        echo "::set-output name=ssh_command::$TMATE_SSH"
 
-    - name: Keep job alive for 6 hours (prevent auto-termination)
+    - name: Keep session alive
       run: timeout 6h tail -f /dev/null

@@ -1,32 +1,9 @@
-name: Linux VPS Setup via Serveo SSH
-
-on: [push, workflow_dispatch]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Install SSH
-      run: sudo apt update && sudo apt install -y openssh-server
-
-    - name: Configure SSH Server
-      run: |
-        echo "runner:P@ssw0rd!" | sudo chpasswd
-        sudo sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config
-        sudo sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config
-        sudo systemctl restart ssh
-        sudo systemctl status ssh --no-pager || true
-
-    - name: Create Serveo Tunnel
-      run: |
-        echo "Establishing Serveo tunnel..."
-        ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -N -R 2222:localhost:22 serveo.net > serveo.log 2>&1 &
-        sleep 10
-        echo "==================== SSH Command ===================="
-        echo "ssh runner@serveo.net -p 2222"
-        echo "Password: P@ssw0rd!"
-        echo "====================================================="
-
-    - name: Keep job alive for 6 hours
-      run: timeout 6h tail -f /dev/null
+- name: Create Localhost.run Tunnel
+  run: |
+    echo "Establishing localhost.run tunnel..."
+    ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -N -R 2222:localhost:22 ssh.localhost.run > localhostrun.log 2>&1 &
+    sleep 10
+    echo "==================== SSH Command ===================="
+    echo "ssh -o StrictHostKeyChecking=no runner@ssh.localhost.run -p 2222"
+    echo "Password: P@ssw0rd!"
+    echo "====================================================="

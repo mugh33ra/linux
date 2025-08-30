@@ -1,4 +1,4 @@
-name: Upterm SSH
+name: Eternal Terminal (et) SSH
 
 on: [push, workflow_dispatch]
 
@@ -7,17 +7,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install Upterm
+    - name: Install Eternal Terminal
       run: |
         sudo apt update
-        sudo apt install -y wget
-        wget https://github.com/owenthereal/upterm/releases/download/v0.7.7/upterm_0.7.7_linux_amd64.tar.gz
-        tar -xzf upterm_0.7.7_linux_amd64.tar.gz
-        sudo mv upterm /usr/local/bin/
-    - name: Start Upterm Session
+        sudo apt install -y et
+    - name: Start ET (SSH alternative)
       run: |
-        ./upterm host -- bash > session.txt 2>&1 &
-        sleep 10
-        cat session.txt
+        echo "Eternal Terminal installed. Use it like:"
+        echo "et user@<runner-ip>"
+        echo "⚠️ Note: Needs inbound connection setup, might require custom networking."
     - name: Keep alive
       run: timeout 6h tail -f /dev/null

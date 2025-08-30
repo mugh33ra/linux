@@ -1,4 +1,4 @@
-name: TTY-Share SSH
+name: ShellShare SSH
 
 on: [push, workflow_dispatch]
 
@@ -7,12 +7,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install tty-share
+    - name: Install ShellShare
       run: |
-        curl -fsSL https://tty-share.org/install.sh | bash
-    - name: Start tty-share Session
+        curl -s https://shellshare.net/install.sh | bash
+    - name: Start ShellShare Session
       run: |
-        tty-share > session.txt 2>&1 &
+        shellshare > session.txt 2>&1 &
         sleep 10
         cat session.txt
     - name: Keep alive

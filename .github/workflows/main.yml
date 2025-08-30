@@ -1,52 +1,28 @@
-name: Linux VPS Setup via Cloudflare SSH
+name: SSH via Cloudflare
 
-on: [push, workflow_dispatch]
+on: workflow_dispatch
 
 jobs:
-  build:
+  ssh:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Install Dependencies
-      run: sudo apt update && sudo apt install -y wget unzip openssh-server
+      - name: Install SSH server
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openssh-server
+          echo "runner:P@ssw0rd!" | sudo chpasswd
+          sudo sed -i 's/^#PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+          sudo sed -i 's/^#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+          sudo systemctl enable ssh
+          sudo systemctl restart ssh
 
-    - name: Install Cloudflared
-      run: |
-        wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-        sudo dpkg -i cloudflared-linux-amd64.deb
+      - name: Download cloudflared
+        run: |
+          wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared-linux-amd64.deb
 
-    - name: Enable SSH Server
-      run: |
-        sudo systemctl start ssh
-        sudo systemctl enable ssh
-
-    - name: Set Password for runner user
-      run: |
-        echo "runner:P@ssw0rd!" | sudo chpasswd
-
-    - name: Allow Password Login for SSH
-      run: |
-        sudo sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config
-        sudo sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config
-        sudo sed -i 's/^#\?UsePAM .*/UsePAM yes/' /etc/ssh/sshd_config
-        sudo systemctl restart ssh
-
-    - name: Start Cloudflare Tunnel for SSH
-      run: |
-        nohup cloudflared tunnel --url ssh://localhost:22 --no-autoupdate > cloudflared.log 2>&1 &
-        sleep 10
-        echo "==================== Cloudflare Tunnel Logs ===================="
-        cat cloudflared.log
-        echo "==============================================================="
-        # Extract the full trycloudflare.com hostname
-        hostname=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare.com' cloudflared.log | head -n1 | sed 's#https://##')
-        echo ""
-        echo "==================== SSH Command ===================="
-        echo "ssh runner@$hostname -p 22"
-        echo "Password: P@ssw0rd!"
-        echo "====================================================="
-        echo ""
-        echo "::set-output name=ssh_command::ssh runner@$hostname -p 22"
-
-    - name: Keep job alive for 6 hours (prevent auto-termination)
-      run: timeout 6h tail -f /dev/null
+      - name: Run Cloudflare Tunnel
+        run: |
+          nohup cloudflared tunnel --url ssh://localhost:22 --no-autoupdate > cloudflared.log 2>&1 &
+          sleep 10
+          cat cloudflared.log | grep -A 2 "trycloudflare.com" || true

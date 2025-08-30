@@ -1,4 +1,4 @@
-name: Eternal Terminal (et) SSH
+name: Mosh SSH
 
 on: [push, workflow_dispatch]
 
@@ -7,14 +7,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install Eternal Terminal
+    - name: Install Mosh
       run: |
         sudo apt update
-        sudo apt install -y et
-    - name: Start ET (SSH alternative)
+        sudo apt install -y mosh
+    - name: Start Mosh
       run: |
-        echo "Eternal Terminal installed. Use it like:"
-        echo "et user@<runner-ip>"
-        echo "⚠️ Note: Needs inbound connection setup, might require custom networking."
+        echo "Mosh installed. Use it like:"
+        echo "mosh user@<runner-ip>"
+        echo "⚠️ Requires inbound connection, so harder inside GitHub Actions."
     - name: Keep alive
       run: timeout 6h tail -f /dev/null

@@ -10,14 +10,21 @@ jobs:
     - name: Install Tmate & Setup SSH
       run: |
         sudo apt update
-        sudo apt install -y tmate openssh-client
+        sudo apt install -y tmate openssh-client tmux
 
-    - name: Start Tmate Session
+        # Enable mouse scrolling in tmux by default
+        echo "set -g mouse on" > ~/.tmux.conf
+
+    - name: Start Tmate Session (with tmux)
       run: |
-        tmate -F -v -S /tmp/tmate.sock new-session -d
+        # Start tmate and automatically launch tmux inside
+        tmate -F -v -S /tmp/tmate.sock new-session -d "tmux new -A -s main"
         tmate -S /tmp/tmate.sock wait tmate-ready
+
+        # Fetch connection strings
         TMATE_SSH=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
         TMATE_WEB=$(tmate -S /tmp/tmate.sock display -p '#{tmate_web}')
+
         echo ""
         echo "==================== CONNECT VIA SSH ===================="
         echo "$TMATE_SSH"

@@ -14,22 +14,27 @@ jobs:
       run: |
         sudo systemctl start ssh
         sudo systemctl enable ssh
-        echo "runner:P@ssw0rd!" | sudo chpasswd
         sudo sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config
         sudo sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config
         sudo systemctl restart ssh
 
-    - name: Create Localhost.run Tunnel
+    - name: Generate SSH Key
       run: |
-        echo "Establishing localhost.run tunnel..."
-        ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -R 2222:localhost:22 ssh.localhost.run echo "TUNNEL_READY" &
+        ssh-keygen -t rsa -b 2048 -f id_rsa -q -N ""
+        echo "==================== YOUR PRIVATE KEY ===================="
+        cat id_rsa
+        echo "========================================================="
+        echo "Save this private key locally, then connect with it!"
+
+    - name: Start Localhost.run Tunnel
+      run: |
+        echo "Starting localhost.run tunnel..."
+        ssh -o StrictHostKeyChecking=no -i id_rsa -R 2222:localhost:22 ssh.localhost.run &
         sleep 10
-        echo ""
-        echo "==================== SSH Command ===================="
-        echo "ssh -o StrictHostKeyChecking=no runner@ssh.localhost.run -p 2222"
-        echo "Password: P@ssw0rd!"
         echo "====================================================="
-        echo ""
+        echo "Use the PRIVATE KEY shown above to connect:"
+        echo "ssh -i id_rsa runner@ssh.localhost.run -p 2222"
+        echo "====================================================="
 
     - name: Keep job alive for 6 hours
       run: timeout 6h tail -f /dev/null

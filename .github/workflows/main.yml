@@ -22,12 +22,14 @@ jobs:
     - name: Create Localhost.run Tunnel
       run: |
         echo "Establishing localhost.run tunnel..."
-        ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -N -R 2222:localhost:22 ssh.localhost.run > localhostrun.log 2>&1 &
+        ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -R 2222:localhost:22 ssh.localhost.run echo "TUNNEL_READY" &
         sleep 10
+        echo ""
         echo "==================== SSH Command ===================="
         echo "ssh -o StrictHostKeyChecking=no runner@ssh.localhost.run -p 2222"
         echo "Password: P@ssw0rd!"
         echo "====================================================="
+        echo ""
 
     - name: Keep job alive for 6 hours
       run: timeout 6h tail -f /dev/null

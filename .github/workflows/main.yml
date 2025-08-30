@@ -11,10 +11,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y openssh-server
           echo "runner:P@ssw0rd!" | sudo chpasswd
-          sudo sed -i 's/^#PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
-          sudo sed -i 's/^#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
-          sudo systemctl enable ssh
+          # Force sshd to listen on all interfaces
+          echo "PasswordAuthentication yes" | sudo tee -a /etc/ssh/sshd_config
+          echo "PermitRootLogin yes" | sudo tee -a /etc/ssh/sshd_config
+          echo "Port 22" | sudo tee -a /etc/ssh/sshd_config
+          echo "ListenAddress 0.0.0.0" | sudo tee -a /etc/ssh/sshd_config
+          echo "ListenAddress :: " | sudo tee -a /etc/ssh/sshd_config
           sudo systemctl restart ssh
+          sudo systemctl status ssh --no-pager || true
 
       - name: Download cloudflared
         run: |
@@ -25,4 +29,6 @@ jobs:
         run: |
           nohup cloudflared tunnel --url ssh://localhost:22 --no-autoupdate > cloudflared.log 2>&1 &
           sleep 10
+          echo "================ Tunnel Info ================"
           cat cloudflared.log | grep -A 2 "trycloudflare.com" || true
+          echo "============================================="

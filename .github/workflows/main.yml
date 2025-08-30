@@ -1,4 +1,4 @@
-name: Teleconsole SSH
+name: Upterm SSH
 
 on: [push, workflow_dispatch]
 
@@ -7,15 +7,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install Teleconsole
+    - name: Install Upterm
       run: |
         sudo apt update
         sudo apt install -y wget
-        wget https://github.com/gravitational/teleconsole/releases/download/v0.4.0/teleconsole_0.4.0_amd64.deb
-        sudo dpkg -i teleconsole_0.4.0_amd64.deb || sudo apt -f install -y
-    - name: Start Teleconsole Session
+        wget https://github.com/owenthereal/upterm/releases/download/v0.7.7/upterm_0.7.7_linux_amd64.tar.gz
+        tar -xzf upterm_0.7.7_linux_amd64.tar.gz
+        sudo mv upterm /usr/local/bin/
+    - name: Start Upterm Session
       run: |
-        teleconsole > session.txt 2>&1 &
+        ./upterm host -- bash > session.txt 2>&1 &
         sleep 10
         cat session.txt
     - name: Keep alive

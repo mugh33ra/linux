@@ -1,40 +1,22 @@
-name: Linux VPS Setup via Localhost.run SSH
+name: Debug with tmate
 
-on: [push, workflow_dispatch]
+on:
+  workflow_dispatch:  # run manually from GitHub Actions
 
 jobs:
-  build:
+  debug:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Install SSH
-      run: sudo apt update && sudo apt install -y openssh-server
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-    - name: Enable SSH Server
-      run: |
-        sudo systemctl start ssh
-        sudo systemctl enable ssh
-        sudo sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config
-        sudo sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config
-        sudo systemctl restart ssh
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: false   # anyone with the link can join
+        env:
+          TMATE_VERBOSE: 1
 
-    - name: Generate SSH Key
-      run: |
-        ssh-keygen -t rsa -b 2048 -f id_rsa -q -N ""
-        echo "==================== YOUR PRIVATE KEY ===================="
-        cat id_rsa
-        echo "========================================================="
-        echo "Save this private key locally, then connect with it!"
-
-    - name: Start Localhost.run Tunnel
-      run: |
-        echo "Starting localhost.run tunnel..."
-        ssh -o StrictHostKeyChecking=no -i id_rsa -R 2222:localhost:22 ssh.localhost.run &
-        sleep 10
-        echo "====================================================="
-        echo "Use the PRIVATE KEY shown above to connect:"
-        echo "ssh -i id_rsa runner@ssh.localhost.run -p 2222"
-        echo "====================================================="
-
-    - name: Keep job alive for 6 hours
-      run: timeout 6h tail -f /dev/null
+      - name: Disable mouse mode in tmux/tmate
+        run: |
+          echo "set -g mouse off" >> ~/.tmux.conf

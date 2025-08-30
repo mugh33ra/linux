@@ -1,34 +1,34 @@
-name: SSH via Cloudflare
+name: Linux VPS Setup via Serveo SSH
 
-on: workflow_dispatch
+on: [push, workflow_dispatch]
 
 jobs:
-  ssh:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Install SSH server
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y openssh-server
-          echo "runner:P@ssw0rd!" | sudo chpasswd
-          # Force sshd to listen on all interfaces
-          echo "PasswordAuthentication yes" | sudo tee -a /etc/ssh/sshd_config
-          echo "PermitRootLogin yes" | sudo tee -a /etc/ssh/sshd_config
-          echo "Port 22" | sudo tee -a /etc/ssh/sshd_config
-          echo "ListenAddress 0.0.0.0" | sudo tee -a /etc/ssh/sshd_config
-          echo "ListenAddress :: " | sudo tee -a /etc/ssh/sshd_config
-          sudo systemctl restart ssh
-          sudo systemctl status ssh --no-pager || true
+    - name: Install SSH
+      run: sudo apt update && sudo apt install -y openssh-server
 
-      - name: Download cloudflared
-        run: |
-          wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-          sudo dpkg -i cloudflared-linux-amd64.deb
+    - name: Enable SSH Server
+      run: |
+        sudo systemctl start ssh
+        sudo systemctl enable ssh
+        echo "runner:P@ssw0rd!" | sudo chpasswd
+        sudo sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+        sudo sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config
+        sudo systemctl restart ssh
 
-      - name: Run Cloudflare Tunnel
-        run: |
-          nohup cloudflared tunnel --url ssh://localhost:22 --no-autoupdate > cloudflared.log 2>&1 &
-          sleep 10
-          echo "================ Tunnel Info ================"
-          cat cloudflared.log | grep -A 2 "trycloudflare.com" || true
-          echo "============================================="
+    - name: Create Serveo Tunnel
+      run: |
+        echo "Establishing Serveo tunnel..."
+        ssh -o StrictHostKeyChecking=no -R 2222:localhost:22 serveo.net > serveo.log 2>&1 &
+        sleep 8
+        echo "==================== SSH Command ===================="
+        echo "ssh runner@serveo.net -p 2222"
+        echo "Password: P@ssw0rd!"
+        echo "====================================================="
+        echo "::set-output name=ssh_command::ssh runner@serveo.net -p 2222"
+
+    - name: Keep job alive for 6 hours
+      run: timeout 6h tail -f /dev/null

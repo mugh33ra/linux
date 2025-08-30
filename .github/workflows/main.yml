@@ -1,14 +1,30 @@
-name: Linux VPS Setup via Upterm
+name: SSH Debug Session
 
-on: [push, workflow_dispatch]
+on:
+  workflow_dispatch:
 
 jobs:
-  build:
+  debug:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Setup Debug Session via Upterm
-      uses: lhotari/action-upterm@v1
-      with:
-        wait-timeout-minutes: 360   # keep alive for 6h
-        limit-access-to-actor: false  # allow connection from anywhere
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # ===== Option 1: Tmate =====
+      - name: Start tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event.inputs.tool == '' || github.event.inputs.tool == 'tmate' }}
+
+      # ===== Option 2: Upterm =====
+      - name: Install Upterm
+        if: ${{ github.event.inputs.tool == 'upterm' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y upterm openssh-client
+
+      - name: Start Upterm session
+        if: ${{ github.event.inputs.tool == 'upterm' }}
+        run: |
+          echo "Starting Upterm session..."
+          upterm host -- bash

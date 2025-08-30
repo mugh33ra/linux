@@ -11,6 +11,8 @@ jobs:
       run: |
         sudo apt update
         sudo apt install -y tmate openssh-client
+        # Disable mouse scrolling in tmux/tmate
+        echo "set -g mouse off" > ~/.tmux.conf
 
     - name: Start Tmate Session
       run: |

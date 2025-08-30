@@ -1,4 +1,4 @@
-name: SSH Debug Session
+name: SSH Debug Session (Upterm)
 
 on:
   workflow_dispatch:
@@ -8,15 +8,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Install Upterm
+      - name: Download Upterm
         run: |
-          sudo apt-get update
-          sudo apt-get install -y upterm openssh-client
+          curl -L https://github.com/owenthereal/upterm/releases/download/v0.9.0/upterm-0.9.0-linux-x86_64.tar.gz -o upterm.tar.gz
+          tar -xzf upterm.tar.gz
+          sudo mv upterm /usr/local/bin/
 
-      - name: Start SSH Session (Upterm)
+      - name: Start Upterm SSH Session
         run: |
           echo "Starting Upterm SSH session..."
-          upterm host -- bash
+          ./upterm host -- bash

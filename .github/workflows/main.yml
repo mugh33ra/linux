@@ -1,4 +1,4 @@
-name: Linux VPS Setup via Tmate
+name: Linux VPS Setup via Upterm
 
 on: [push, workflow_dispatch]
 
@@ -7,33 +7,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install Tmate & Setup SSH
-      run: |
-        sudo apt update
-        sudo apt install -y tmate openssh-client tmux
-
-        # Enable mouse scrolling in tmux by default
-        echo "set -g mouse on" > ~/.tmux.conf
-
-    - name: Start Tmate Session (with tmux)
-      run: |
-        # Start tmate and automatically launch tmux inside
-        tmate -F -v -S /tmp/tmate.sock new-session -d "tmux new -A -s main"
-        tmate -S /tmp/tmate.sock wait tmate-ready
-
-        # Fetch connection strings
-        TMATE_SSH=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
-        TMATE_WEB=$(tmate -S /tmp/tmate.sock display -p '#{tmate_web}')
-
-        echo ""
-        echo "==================== CONNECT VIA SSH ===================="
-        echo "$TMATE_SSH"
-        echo ""
-        echo "==================== CONNECT VIA WEB ===================="
-        echo "$TMATE_WEB"
-        echo "========================================================="
-        echo ""
-        echo "::set-output name=ssh_command::$TMATE_SSH"
-
-    - name: Keep session alive
-      run: timeout 6h tail -f /dev/null
+    - name: Setup Debug Session via Upterm
+      uses: lhotari/action-upterm@v1
+      with:
+        wait-timeout-minutes: 360   # keep alive for 6h
+        limit-access-to-actor: false  # allow connection from anywhere

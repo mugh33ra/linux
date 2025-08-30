@@ -1,22 +1,32 @@
-name: Debug with tmate
+name: Linux VPS Setup via Tmate
 
-on:
-  workflow_dispatch:  # run manually from GitHub Actions
+on: [push, workflow_dispatch]
 
 jobs:
-  debug:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+    - name: Install Tmate & Setup SSH
+      run: |
+        sudo apt update
+        sudo apt install -y tmate openssh-client
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        with:
-          limit-access-to-actor: false   # anyone with the link can join
-        env:
-          TMATE_VERBOSE: 1
+    - name: Start Tmate Session
+      run: |
+        tmate -F -v -S /tmp/tmate.sock new-session -d
+        tmate -S /tmp/tmate.sock wait tmate-ready
+        TMATE_SSH=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
+        TMATE_WEB=$(tmate -S /tmp/tmate.sock display -p '#{tmate_web}')
+        echo ""
+        echo "==================== CONNECT VIA SSH ===================="
+        echo "$TMATE_SSH"
+        echo ""
+        echo "==================== CONNECT VIA WEB ===================="
+        echo "$TMATE_WEB"
+        echo "========================================================="
+        echo ""
+        echo "::set-output name=ssh_command::$TMATE_SSH"
 
-      - name: Disable mouse mode in tmux/tmate
-        run: |
-          echo "set -g mouse off" >> ~/.tmux.conf
+    - name: Keep session alive
+      run: timeout 6h tail -f /dev/null

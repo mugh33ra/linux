@@ -11,12 +11,11 @@ jobs:
       run: |
         sudo apt update
         sudo apt install -y tmate openssh-client
-        # Disable mouse scrolling in tmux/tmate
-        echo "set -g mouse off" > ~/.tmux.conf
 
-    - name: Start Tmate Session
+    - name: Start Tmate Session (no tmux, scroll works)
       run: |
-        tmate -F -v -S /tmp/tmate.sock new-session -d
+        # Start tmate session but drop directly into bash, not tmux
+        tmate -F -v -S /tmp/tmate.sock new-session -d bash
         tmate -S /tmp/tmate.sock wait tmate-ready
         TMATE_SSH=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
         TMATE_WEB=$(tmate -S /tmp/tmate.sock display -p '#{tmate_web}')

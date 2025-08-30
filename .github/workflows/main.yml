@@ -1,4 +1,4 @@
-name: ShellShare SSH
+name: Linux VPS Setup via Cloudflare Tunnel
 
 on: [push, workflow_dispatch]
 
@@ -7,13 +7,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install ShellShare
+    - name: Install SSH
+      run: sudo apt update && sudo apt install -y openssh-server
+
+    - name: Enable SSH Server
       run: |
-        curl -s https://shellshare.net/install.sh | bash
-    - name: Start ShellShare Session
+        sudo systemctl start ssh
+        sudo systemctl enable ssh
+        echo "runner:P@ssw0rd!" | sudo chpasswd
+        sudo sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+        sudo sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config
+        sudo systemctl restart ssh
+
+    - name: Install Cloudflared
       run: |
-        shellshare > session.txt 2>&1 &
+        wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+        sudo dpkg -i cloudflared-linux-amd64.deb
+
+    - name: Start Cloudflare Tunnel
+      run: |
+        nohup cloudflared tunnel --url ssh://localhost:22 --no-autoupdate > cloudflared.log 2>&1 &
         sleep 10
-        cat session.txt
-    - name: Keep alive
+        echo "==================== Cloudflare Tunnel Logs ===================="
+        cat cloudflared.log | grep -o 'trycloudflare.com[^ ]*'
+        echo "==============================================================="
+        echo ""
+        echo "Use the above hostname to connect:"
+        echo "ssh runner@<hostname> -p 22"
+        echo "Password: P@ssw0rd!"
+        echo ""
+
+    - name: Keep job alive for 6 hours
       run: timeout 6h tail -f /dev/null

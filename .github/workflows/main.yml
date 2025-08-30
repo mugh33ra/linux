@@ -1,4 +1,4 @@
-name: Mosh SSH
+name: TTY-Share SSH
 
 on: [push, workflow_dispatch]
 
@@ -7,14 +7,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install Mosh
+    - name: Install tty-share
       run: |
-        sudo apt update
-        sudo apt install -y mosh
-    - name: Start Mosh
+        curl -fsSL https://tty-share.org/install.sh | bash
+    - name: Start tty-share Session
       run: |
-        echo "Mosh installed. Use it like:"
-        echo "mosh user@<runner-ip>"
-        echo "⚠️ Requires inbound connection, so harder inside GitHub Actions."
+        tty-share > session.txt 2>&1 &
+        sleep 10
+        cat session.txt
     - name: Keep alive
       run: timeout 6h tail -f /dev/null

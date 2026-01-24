@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install Tmate & Setup SSH
+    - name: Install Tmate & Setup SSh
       run: |
         sudo apt update
         sudo apt install -y tmate openssh-client
